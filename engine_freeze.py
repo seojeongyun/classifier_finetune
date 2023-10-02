@@ -21,7 +21,7 @@ plt.ion()   # interactive mode
 class Trainer_freeze():
     def __init__(self, epochs=25, num_images=6):
         self.save_path = './ckpt/last_ckpt.pt'
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
         #
         self.epochs = epochs
         self.num_images = num_images
@@ -35,6 +35,10 @@ class Trainer_freeze():
         self.scheduler = self.get_scheduler()
         #
         self.predict = self.model_predict()
+        #
+        self.val_loss = []
+        self.train_loss = []
+        self.num = []
 
     def get_criterion(self):
         criterion = nn.CrossEntropyLoss()
@@ -71,6 +75,7 @@ class Trainer_freeze():
         best_acc = 0.0
 
         for epoch in range(self.epochs):
+            self.num.append(epoch)
             print(f'Epoch {epoch}/{self.epochs - 1}')
             print('-' * 10)
 
@@ -115,6 +120,11 @@ class Trainer_freeze():
 
                 print(f'{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
+                if phase == 'val':
+                    self.val_loss.append(epoch_loss)
+                else:
+                    self.train_loss.append(epoch_loss)
+
                 # deep copy the model
                 if phase == 'val' and epoch_acc > best_acc:
                     best_acc = epoch_acc
@@ -157,22 +167,33 @@ class Trainer_freeze():
             self.model.train(mode=was_training)
 
     def model_predict(self):
-        def visualize_model_predictions(model, img_path):
-            was_training = model.training
-            model.eval()
+        was_training = self.model.training
+        self.model.eval()
 
-            img = Image.open(img_path)
-            img = data_transforms['val'](img)
-            img = img.unsqueeze(0)
-            img = img.to(device)
+        img = Image.open('/storage/jysuh/hymenoptera_data/val/ants/94999827_36895faade.jpg')
+        img = self.loader.transform['val'](img)
+        img = img.unsqueeze(0)
+        img = img.to(self.device)
 
-            with torch.no_grad():
-                outputs = model(img)
-                _, preds = torch.max(outputs, 1)
+        with torch.no_grad():
+            outputs = self.model(img)
+            _, preds = torch.max(outputs, 1)
 
-                ax = plt.subplot(2, 2, 1)
-                ax.axis('off')
-                ax.set_title(f'Predicted: {class_names[preds[0]]}')
-                imshow(img.cpu().data[0])
+            ax = plt.subplot(2, 2, 1)
+            ax.axis('off')
+            ax.set_title(f'Predicted: {self.loader.cls_name[preds[0]]}')
+            imshow(img.cpu().data[0])
 
-                model.train(mode=was_training)
+            self.model.train(mode=was_training)
+
+    def print_loss(self):
+        plt.figure(figsize=(10, 5))
+        plt.subplot(1, 2, 1)
+        plt.xlabel('Epoch')
+        plt.ylabel('train_Loss')
+        plt.plot(self.num, self.train_loss)
+        plt.subplot(1, 2, 2)
+        plt.xlabel('Epoch')
+        plt.ylabel('val_Loss')
+        plt.plot(self.num, self.val_loss)
+        plt.show()

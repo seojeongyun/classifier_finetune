@@ -18,10 +18,12 @@ cudnn.benchmark = True
 plt.ion()   # interactive mode
 
 
+
+
 class Trainer():
     def __init__(self, epochs=25, num_images=6):
         self.save_path = './ckpt/last_ckpt.pt'
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
         #
         self.epochs = epochs
         self.num_images = num_images
@@ -33,6 +35,12 @@ class Trainer():
         self.criterion = self.get_criterion()
         self.optimizer = self.get_optimizer()
         self.scheduler = self.get_scheduler()
+        #
+        self.predict = self.model_predict()
+        #
+        self.val_loss = []
+        self.train_loss = []
+        self.num = []
 
     def get_criterion(self):
         criterion = nn.CrossEntropyLoss()
@@ -64,6 +72,7 @@ class Trainer():
         best_acc = 0.0
 
         for epoch in range(self.epochs):
+            self.num.append(epoch)
             print(f'Epoch {epoch}/{self.epochs - 1}')
             print('-' * 10)
 
@@ -72,7 +81,7 @@ class Trainer():
                 if phase == 'train':
                     self.model.train()  # Set model to training mode
                 else:
-                    self.model.eval()   # Set model to evaluate mode
+                    self.model.eval()  # Set model to evaluate mode
 
                 running_loss = 0.0
                 running_corrects = 0
@@ -107,6 +116,11 @@ class Trainer():
                 epoch_acc = running_corrects.double() / self.loader.len[phase]
 
                 print(f'{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
+
+                if phase == 'val':
+                    self.val_loss.append(epoch_loss)
+                else:
+                    self.train_loss.append(epoch_loss)
 
                 # deep copy the model
                 if phase == 'val' and epoch_acc > best_acc:
@@ -148,3 +162,35 @@ class Trainer():
                         self.model.train(mode=was_training)
                         return
             self.model.train(mode=was_training)
+
+    def model_predict(self):
+        was_training = self.model.training
+        self.model.eval()
+
+        img = Image.open('/storage/jysuh/hymenoptera_data/val/ants/94999827_36895faade.jpg')
+        img = self.loader.transform['val'](img)
+        img = img.unsqueeze(0)
+        img = img.to(self.device)
+
+        with torch.no_grad():
+            outputs = self.model(img)
+            _, preds = torch.max(outputs, 1)
+
+            ax = plt.subplot(2, 2, 1)
+            ax.axis('off')
+            ax.set_title(f'Predicted: {self.loader.cls_name[preds[0]]}')
+            imshow(img.cpu().data[0])
+
+            self.model.train(mode=was_training)
+
+    def print_loss(self):
+        plt.figure(figsize=(10, 5))
+        plt.subplot(1, 2, 1)
+        plt.xlabel('Epoch')
+        plt.ylabel('train_Loss')
+        plt.plot(self.num, self.train_loss)
+        plt.subplot(1, 2, 2)
+        plt.xlabel('Epoch')
+        plt.ylabel('val_Loss')
+        plt.plot(self.num, self.val_loss)
+        plt.show()

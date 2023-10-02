@@ -24,7 +24,7 @@ plt.ion()   # interactive mode
 
 if __name__ == '__main__':
     data = dataloader()
-    trainer = Trainer_freeze(epochs=10, num_images=6)
+    trainer = Trainer(epochs=25, num_images=6)
 
     # Get a batch of training data
     inputs, classes = next(iter(data.dataloaders['train']))
@@ -37,3 +37,7 @@ if __name__ == '__main__':
     model_ft = trainer.train_model()
 
     trainer.visualize_model()
+
+    trainer.model_predict()
+
+    trainer.print_loss()
