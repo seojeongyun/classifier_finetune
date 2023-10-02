@@ -14,6 +14,7 @@ from tempfile import TemporaryDirectory
 from data_loader import dataloader
 from function import imshow
 from engine import Trainer
+from engine_freeze import Trainer_freeze
 
 cudnn.benchmark = True
 plt.ion()   # interactive mode
@@ -23,7 +24,7 @@ plt.ion()   # interactive mode
 
 if __name__ == '__main__':
     data = dataloader()
-    trainer = Trainer(epochs=10, num_images=6)
+    trainer = Trainer_freeze(epochs=10, num_images=6)
 
     # Get a batch of training data
     inputs, classes = next(iter(data.dataloaders['train']))
