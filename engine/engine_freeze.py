@@ -20,7 +20,7 @@ plt.ion()   # interactive mode
 
 class Trainer_freeze():
     def __init__(self, epochs=25, num_images=6):
-        self.save_path = './ckpt/last_ckpt.pt'
+        self.save_path = '../ckpt/last_ckpt.pt'
         self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
         #
         self.epochs = epochs
